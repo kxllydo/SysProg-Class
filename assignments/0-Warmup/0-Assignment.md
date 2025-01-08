@@ -35,10 +35,13 @@ Please provide answers to these questions using markdown notation and place them
 
 
 3. Please provide a link to the repository you are using for this class.
+
 https://github.com/kxllydo/SysProg-Class
 
 4. Briefly describe what you want to get out of this class.
+
 I want to learn more about how software and hardware interact with each other and more about what network programming is.
 
 5. Briefly describe any concerns you might be having with being successful in this class (if any).
+
 I am not familiar with a lot of hardware concepts so that might hinder my sucessfulness in this class.
