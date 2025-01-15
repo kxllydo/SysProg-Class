@@ -15,25 +15,27 @@ int  count_words(char *, int, int);
 //add additional prototypes here
 
 
-int setup_buff(char **buff, char *user_str, int len) {
-    *buff = malloc(len); // Allocate memory for the buffer
-    if (*buff == NULL) {
-        return -1; // Allocation failed
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int setup_buff(char *buff, char *user_str, int len) {
+    if (buff == NULL) {
+        return -1; // Buffer not allocated
     }
 
-    char *temp_buff = *buff; // Pointer to iterate through the buffer
     int buffLen = 0;
     int consecSpace = 0;
 
     while (*user_str != '\0' && buffLen < len - 1) { // Ensure not to overflow
         if (*user_str == ' ' || *user_str == '\t' || *user_str == '\n') {
             if (consecSpace == 0) { // Allow only one space
-                *temp_buff++ = ' ';
+                *buff++ = ' ';
                 buffLen++;
                 consecSpace = 1;
             }
         } else {
-            *temp_buff++ = *user_str;
+            *buff++ = *user_str;
             buffLen++;
             consecSpace = 0;
         }
@@ -42,13 +44,35 @@ int setup_buff(char **buff, char *user_str, int len) {
 
     // Fill remaining space with '.' if buffer isn't full
     while (buffLen < len - 1) {
-        *temp_buff++ = '.';
+        *buff++ = '.';
         buffLen++;
     }
 
-    *temp_buff = '\0'; // Null-terminate the string
+    *buff = '\0'; // Null-terminate the string
     return 0; // Success
 }
+
+// Test Function
+int main() {
+    int buffer_size = 50;
+    char *buffer = malloc(buffer_size); // Pre-allocate memory for the buffer
+    if (buffer == NULL) {
+        printf("Memory allocation failed.\n");
+        return -1;
+    }
+
+    char user_input[] = "Hello,   world!  This is    a test.";
+
+    if (setup_buff(buffer, user_input, buffer_size) == 0) {
+        printf("Processed buffer: \"%s\"\n", buffer);
+    } else {
+        printf("Error processing the buffer.\n");
+    }
+
+    free(buffer); // Free the allocated memory
+    return 0;
+}
+
 
 void print_buff(char *buff, int len){
     printf("Buffer:  ");
