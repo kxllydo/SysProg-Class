@@ -16,7 +16,39 @@ int  count_words(char *, int, int);
 
 
 int setup_buff(char *buff, char *user_str, int len){
-    //TODO: #4:  Implement the setup buff as per the directions
+    *buff = malloc(len);
+    char *temp = malloc(len);
+
+    char *help = user_str;
+    char *previous;
+    int buffLen = 0;
+    int consecSpace = 0;
+
+
+
+    while (*user_str != '\0') {
+        if (*user_str == " " || *user_str == '\t' || *user_str == '\n'){
+            if (consecSpace != 0){
+                *buff++ = ' ';
+                buffLen += 1
+                consecSpace = 1;
+            }
+        } else {
+            *buff++ = *user_str;
+            buffLen += 1
+            consecSpace = 0;
+        }
+        user_str++;
+    }
+
+    if (buffLen < len){
+        while (buffLen < len){
+            *buff++ = ".";
+        }
+        *buff = '\0';
+    }
+
+
     return 0; //for now just so the code compiles. 
 }
 
@@ -33,8 +65,13 @@ void usage(char *exename){
 
 }
 
+
+// *buff - pointer to the word?
 int count_words(char *buff, int len, int str_len){
-    //YOU MUST IMPLEMENT
+    char *ptr = buff;
+    char *end = buff + str_len;
+
+    for (int i = 0; i < str_len)
     return 0;
 }
 
@@ -49,7 +86,8 @@ int main(int argc, char *argv[]){
     int  user_str_len;      //length of user supplied string
 
     //TODO:  #1. WHY IS THIS SAFE, aka what if arv[1] does not exist?
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      This is safe because it handles the case where arv[1] does not exit and causes the program to exit. 
+    //      No other processes will be ran which prevents errors
     if ((argc < 2) || (*argv[1] != '-')){
         usage(argv[0]);
         exit(1);
@@ -66,7 +104,7 @@ int main(int argc, char *argv[]){
     //WE NOW WILL HANDLE THE REQUIRED OPERATIONS
 
     //TODO:  #2 Document the purpose of the if statement below
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      This checks is there are not 3 arguments inputted which is needed for the flag and string
     if (argc < 3){
         usage(argv[0]);
         exit(1);
