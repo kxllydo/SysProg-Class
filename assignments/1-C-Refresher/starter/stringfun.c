@@ -15,41 +15,39 @@ int  count_words(char *, int, int);
 //add additional prototypes here
 
 
-int setup_buff(char *buff, char *user_str, int len){
-    *buff = malloc(len);
-    char *temp = malloc(len);
+int setup_buff(char **buff, char *user_str, int len) {
+    *buff = malloc(len); // Allocate memory for the buffer
+    if (*buff == NULL) {
+        return -1; // Allocation failed
+    }
 
-    char *help = user_str;
-    char *previous;
+    char *temp_buff = *buff; // Pointer to iterate through the buffer
     int buffLen = 0;
     int consecSpace = 0;
 
-
-
-    while (*user_str != '\0') {
-        if (*user_str == " " || *user_str == '\t' || *user_str == '\n'){
-            if (consecSpace != 0){
-                *buff++ = ' ';
-                buffLen += 1
+    while (*user_str != '\0' && buffLen < len - 1) { // Ensure not to overflow
+        if (*user_str == ' ' || *user_str == '\t' || *user_str == '\n') {
+            if (consecSpace == 0) { // Allow only one space
+                *temp_buff++ = ' ';
+                buffLen++;
                 consecSpace = 1;
             }
         } else {
-            *buff++ = *user_str;
-            buffLen += 1
+            *temp_buff++ = *user_str;
+            buffLen++;
             consecSpace = 0;
         }
         user_str++;
     }
 
-    if (buffLen < len){
-        while (buffLen < len){
-            *buff++ = ".";
-        }
-        *buff = '\0';
+    // Fill remaining space with '.' if buffer isn't full
+    while (buffLen < len - 1) {
+        *temp_buff++ = '.';
+        buffLen++;
     }
 
-
-    return 0; //for now just so the code compiles. 
+    *temp_buff = '\0'; // Null-terminate the string
+    return 0; // Success
 }
 
 void print_buff(char *buff, int len){
