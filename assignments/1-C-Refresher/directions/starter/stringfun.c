@@ -149,11 +149,11 @@ int main(int argc, char *argv[]){
             }
             printf("Word Count: %d\n", rc);
             break;
-
         //TODO:  #5 Implement the other cases for 'r' and 'w' by extending
         //       the case statement options
         case 'r':
             reverse_string(buff, user_str_len);
+            break;
         default:
             usage(argv[0]);
             exit(1);
