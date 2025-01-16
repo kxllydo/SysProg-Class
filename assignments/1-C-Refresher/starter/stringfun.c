@@ -93,7 +93,6 @@ int count_words(char *buff, int len, int str_len){
     char *ptr = buff;
     char *end = buff + str_len;
 
-    for (int i = 0; i < str_len)
     return 0;
 }
 

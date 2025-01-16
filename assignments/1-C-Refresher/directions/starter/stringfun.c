@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 #define BUFFER_SZ 50
 
 //prototypes
@@ -12,12 +11,37 @@ int  setup_buff(char *, char *, int);
 
 //prototypes for functions to handle required functionality
 int  count_words(char *, int, int);
-//add additional prototypes here
+//add additional prototypes heres
 
+int setup_buff(char *buff, char *user_str, int len) {
+    char *current = buff;     
+    char *currentChar = user_str; 
+    int consecSpace = 0;  
+    int count = 0;
 
-int setup_buff(char *buff, char *user_str, int len){
-    //TODO: #4:  Implement the setup buff as per the directions
-    return 0; //for now just so the code compiles. 
+    while (*currentChar != '\0' && (current - buff) < len - 1) {  // Stop if we reach the end of the user string or the buffer size limit
+        if (isspace(*currentChar)) {  // Check if the character is a whitespace (space or tab)
+            if (!consecSpace) {  
+                *current = ' ';  
+                current++;       
+                consecSpace = 1;  // Mark that we are inside a whitespace sequence
+                count++;
+            }
+        } else {
+            *current = *currentChar;
+            current++;
+            consecSpace = 0;
+            count++;
+        }
+        currentChar++; 
+    }
+
+    while ((current - buff) < len) {
+        *current = '.';
+        current++;
+    }
+
+    return count;
 }
 
 void print_buff(char *buff, int len){
@@ -34,9 +58,38 @@ void usage(char *exename){
 }
 
 int count_words(char *buff, int len, int str_len){
-    //YOU MUST IMPLEMENT
-    return 0;
+    char *current = buff;
+    int inWord = 0;
+    int wordCount = 0;
+
+    for (int i = 0; i < str_len; i++) {
+        if (isspace(*current)) {
+            if (inWord != 0){
+                wordCount++;
+            }
+            inWord = 0;
+        } else {
+            inWord = 1;
+        }
+        current++;
+    }
+    return wordCount + 1;
 }
+
+void reverse_string(char *buff, int str_len) {
+    char *start = buff; 
+    char *end = buff + str_len - 1;  
+
+    while (start < end) {
+        char temp = *start;
+        *start = *end;
+        *end = temp;
+
+        start++;
+        end--;
+    }
+}
+
 
 //ADD OTHER HELPER FUNCTIONS HERE FOR OTHER REQUIRED PROGRAM OPTIONS
 
@@ -78,9 +131,10 @@ int main(int argc, char *argv[]){
     //          handle error if malloc fails by exiting with a 
     //          return code of 99
     // CODE GOES HERE FOR #3
-
+    buff = (char *)malloc(BUFFER_SZ * sizeof(char));  // Allocate memory for the buffer
 
     user_str_len = setup_buff(buff, input_string, BUFFER_SZ);     //see todos
+
     if (user_str_len < 0){
         printf("Error setting up buffer, error = %d", user_str_len);
         exit(2);
@@ -98,6 +152,8 @@ int main(int argc, char *argv[]){
 
         //TODO:  #5 Implement the other cases for 'r' and 'w' by extending
         //       the case statement options
+        case 'r':
+            reverse_string(buff, user_str_len);
         default:
             usage(argv[0]);
             exit(1);
@@ -105,6 +161,8 @@ int main(int argc, char *argv[]){
 
     //TODO:  #6 Dont forget to free your buffer before exiting
     print_buff(buff,BUFFER_SZ);
+    free(buff);
+
     exit(0);
 }
 
