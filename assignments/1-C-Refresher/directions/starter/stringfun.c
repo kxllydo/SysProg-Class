@@ -8,12 +8,18 @@
 void usage(char *);
 void print_buff(char *, int);
 int  setup_buff(char *, char *, int);
-
-//prototypes for functions to handle required functionality
 int  count_words(char *, int, int);
-//add additional prototypes heres
+int find_length(char *);
+int count_words(char *, int, int);
+void reverse_string(char *, int);
+int word_print(char *, int);
+int stringCompare(char *, char *, size_t);
+int replace_word(char *, int, int, char *, char *);
+
 
 int setup_buff(char *buff, char *user_str, int len) {
+    //TODO: #4:  Implement the setup buff as per the directions
+
     char *current = buff;
     char *currentChar = user_str;
     int consecSpace = 0;
@@ -132,7 +138,7 @@ int word_print(char *buff, int str_len) {
     int inWord = 0;
     int wordCount = 0;
     int length = 0;
-    char *wordPtr = word;
+    char *wordPtr = word;      // tracks a single word in the string
 
     if (!word) {
         printf("Memory allocation failed\n");
@@ -169,6 +175,22 @@ int word_print(char *buff, int str_len) {
     free(word);
     return 0;
 }
+
+int stringCompare(char *str1, char *str2, size_t n) {
+    while (n-- > 0) {
+        if (*str1 != *str2) {
+            return (unsigned char)*str1 - (unsigned char)*str2;
+        }
+        if (*str1 == '\0') {
+            break;
+        }
+        str1++;
+        str2++;
+    }
+    return 0;
+}
+
+
 int replace_word(char *buff, int len, int str_len, char *oldWord, char *newWord) {
     int oldLength = strlen(oldWord);
     int newLength = strlen(newWord);
@@ -190,7 +212,7 @@ int replace_word(char *buff, int len, int str_len, char *oldWord, char *newWord)
     char *newBuffEnd = buff + len;
 
     while (buff < buffEnd && newBuff < newBuffEnd) {
-    if (strncmp(buff, oldWord, oldLength) == 0) {
+    if (stringCompare(buff, oldWord, oldLength) == 0) {
         if ((newBuff + newLength) < newBuffEnd) {
             memcpy(newBuff, newWord, newLength);
             newBuff += newLength;
@@ -224,13 +246,14 @@ int main(int argc, char *argv[]){
     int  user_str_len;      //length of user supplied string
 
     //TODO:  #1. WHY IS THIS SAFE, aka what if arv[1] does not exist?
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      This is safe because it checks if argv[1] exists and handles the case where no commmand line arguments are passed
+    //      It also handles invalid input and exists the program appropiately
     if ((argc < 2) || (*argv[1] != '-')){
         usage(argv[0]);
         exit(1);
     }
 
-    opt = (char)*(argv[1]+1);   //get the option flag
+    opt = (char)*(argv[1]+1);
 
     if (opt == 'h'){
         usage(argv[0]);
@@ -240,13 +263,14 @@ int main(int argc, char *argv[]){
     //WE NOW WILL HANDLE THE REQUIRED OPERATIONS
 
     //TODO:  #2 Document the purpose of the if statement below
-    //      PLACE A COMMENT BLOCK HERE EXPLAINING
+    //      This checks if the user provided the minimum amount of arguments (the executable, flag, and string). 
+    //      It exits the program if it did not.
     if (argc < 3){
         usage(argv[0]);
         exit(1);
     }
 
-    input_string = argv[2]; //capture the user input string
+    input_string = argv[2];
 
     //TODO:  #3 Allocate space for the buffer using malloc and
     //          handle error if malloc fails by exiting with a 
@@ -280,6 +304,9 @@ int main(int argc, char *argv[]){
                 exit(2);
             }
             break;
+
+        //TODO:  #5 Implement the other cases for 'r' and 'w' by extending
+        //       the case statement options
         
         case 'r':
             reverse_string(buff, user_str_len);
@@ -305,6 +332,7 @@ int main(int argc, char *argv[]){
     }
 
     print_buff(buff,BUFFER_SZ);
+    //TODO:  #6 Dont forget to free your buffer before exiting
     free(buff);
 
     exit(0);
@@ -316,4 +344,6 @@ int main(int argc, char *argv[]){
 //          is a good practice, after all we know from main() that 
 //          the buff variable will have exactly 50 bytes?
 //  
-//          PLACE YOUR ANSWER HERE
+//          I think that providing the pointer and the length is good practice because it makes our code more flexible to buffer sizes
+//          that might not be 50 bytes. Furthermore, in real world scenarios, the buffer size could be dynamically allocated/ not fixed
+//          and providing the length ensures the functions can handle any buffer size.
