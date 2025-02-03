@@ -58,8 +58,33 @@ int open_db(char *dbFile, bool should_truncate){
  * 
  *  console:  Does not produce any console I/O used by other functions
  */
-int get_student(int fd, int id, student_t *s){
-    return NOT_IMPLEMENTED_YET;
+int get_student(int fd, int id, student_t *s) {
+    // Validate the ID range
+    if (id < MIN_STD_ID || id > MAX_STD_ID) {
+        return SRCH_NOT_FOUND;
+    }
+
+    // Calculate the offset for the student record
+    off_t offset = id * STUDENT_RECORD_SIZE;
+
+    // Seek to the correct position in the file
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        printf(M_ERR_DB_SEEK);
+        return ERR_DB_FILE;
+    }
+
+    // Read the student record from the file
+    if (read(fd, s, STUDENT_RECORD_SIZE) != STUDENT_RECORD_SIZE) {
+        printf(M_ERR_DB_READ);
+        return ERR_DB_FILE;
+    }
+
+    // Check if the record is empty (deleted)
+    if (s->id == DELETED_STUDENT_ID) {
+        return SRCH_NOT_FOUND;
+    }
+
+    return NO_ERROR;
 }
 
 /*
@@ -87,10 +112,77 @@ int get_student(int fd, int id, student_t *s){
  *            M_ERR_DB_WRITE    error writing to db file (adding student)
  *            
  */
-int add_student(int fd, int id, char *fname, char *lname, int gpa){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#define NO_ERROR        0
+#define ERR_DB_FILE     -1
+#define ERR_DB_OP       -2
+#define SRCH_NOT_FOUND  -3
+#define NOT_IMPLEMENTED_YET 0
+
+int add_student(int fd, int id, char *fname, char *lname, int gpa) {
+    // Check if ID and GPA are within valid ranges
+    if (id < MIN_STD_ID || id > MAX_STD_ID || gpa < MIN_STD_GPA || gpa > MAX_STD_GPA) {
+        fprintf(stderr, M_ERR_STD_RNG);
+        return ERR_DB_OP;  // Invalid ID or GPA
+    }
+
+    // Allocate a student structure and populate it
+    student_t *new_student = malloc(sizeof(student_t));    
+    new_student->id = id;
+    strncpy(new_student->fname, fname, sizeof(new_student->fname) - 1);
+    strncpy(new_student->lname, lname, sizeof(new_student->lname) - 1);
+    new_student->gpa = gpa;
+
+    // Seek to the position of the student record
+    off_t offset = id * STUDENT_RECORD_SIZE;
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        fprintf(stderr, M_ERR_DB_SEEK);
+        free(new_student);  // Free the allocated memory
+        return ERR_DB_FILE;  // Error seeking in the file
+    }
+
+    // Read the current record at the given position to check if it already exists
+    student_t existing_student;
+    if (read(fd, &existing_student, STUDENT_RECORD_SIZE) == -1) {
+        fprintf(stderr, M_ERR_DB_READ);
+        free(new_student);  // Free the allocated memory
+        return ERR_DB_FILE;  // Error reading from the file
+    }
+
+    // If the record already exists, return an error
+    // Here, we'll check if the record is empty or deleted, meaning it's available for insertion
+    if (existing_student.id != DELETED_STUDENT_ID && existing_student.id != 0) {
+        fprintf(stderr, M_ERR_DB_ADD_DUP, id);
+        free(new_student);  // Free the allocated memory
+        return ERR_DB_OP;  // Attempt to add a student with an existing ID
+    }
+
+    // Now write the new student record to the file
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        fprintf(stderr, M_ERR_DB_SEEK);
+        free(new_student);  // Free the allocated memory
+        return ERR_DB_FILE;  // Error seeking in the file again
+    }
+
+    if (write(fd, new_student, STUDENT_RECORD_SIZE) == -1) {
+        fprintf(stderr, M_ERR_DB_WRITE);
+        free(new_student);  // Free the allocated memory
+        return ERR_DB_FILE;  // Error writing to the file
+    }
+
+    // Print success message
+    printf(M_STD_ADDED, id);
+
+    // Free the dynamically allocated memory
+    free(new_student);
+    
+    return NO_ERROR;  // Success
 }
+
 
 /*
  *  del_student
@@ -114,9 +206,39 @@ int add_student(int fd, int id, char *fname, char *lname, int gpa){
  *            M_ERR_DB_WRITE     error writing to db file (adding student)
  *            
  */
-int del_student(int fd, int id){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int del_student(int fd, int id) {
+    // Validate the ID range
+    if (id < MIN_STD_ID || id > MAX_STD_ID) {
+        return SRCH_NOT_FOUND;
+    }
+
+    // Check if the student exists
+    student_t student;
+    int status = get_student(fd, id, &student);
+    if (status == SRCH_NOT_FOUND) {
+        printf(M_STD_NOT_FND_MSG, id);
+        return SRCH_NOT_FOUND;
+    }
+
+    // Create an empty record
+    student_t empty_student = EMPTY_STUDENT_RECORD;
+
+    // Seek to the record position
+    off_t offset = id * STUDENT_RECORD_SIZE;
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        printf(M_ERR_DB_SEEK);
+        return ERR_DB_FILE;
+    }
+
+    // Write the empty record to the file
+    if (write(fd, &empty_student, STUDENT_RECORD_SIZE) != STUDENT_RECORD_SIZE) {
+        printf(M_ERR_DB_WRITE);
+        return ERR_DB_FILE;
+    }
+
+    // Success
+    printf(M_STD_DEL_MSG, id);
+    return NO_ERROR;
 }
 
 /*
@@ -143,9 +265,39 @@ int del_student(int fd, int id){
  *            M_ERR_DB_WRITE   error writing to db file (adding student)
  *            
  */
-int count_db_records(int fd){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int count_db_records(int fd) {
+    int record_count = 0;
+    student_t student;
+
+    // Iterate through all possible IDs
+    for (int id = MIN_STD_ID; id <= MAX_STD_ID; id++) {
+        // Seek to the record position
+        off_t offset = id * STUDENT_RECORD_SIZE;
+        if (lseek(fd, offset, SEEK_SET) == -1) {
+            printf(M_ERR_DB_SEEK);
+            return ERR_DB_FILE;
+        }
+
+        // Read the record
+        if (read(fd, &student, STUDENT_RECORD_SIZE) != STUDENT_RECORD_SIZE) {
+            printf(M_ERR_DB_READ);
+            return ERR_DB_FILE;
+        }
+
+        // Check if the record is not empty
+        if (student.id != DELETED_STUDENT_ID) {
+            record_count++;
+        }
+    }
+
+    // Output the result
+    if (record_count == 0) {
+        printf(M_DB_EMPTY);
+    } else {
+        printf(M_DB_RECORD_CNT, record_count);
+    }
+
+    return NO_ERROR;
 }
 
 /*
@@ -181,9 +333,32 @@ int count_db_records(int fd){
  *            M_ERR_DB_READ    error reading or seeking the database file
  *            
  */
-int print_db(int fd){
-    printf(M_NOT_IMPL);
-    return NOT_IMPLEMENTED_YET;
+int print_db(int fd) {
+    FILE *file = fdopen(fd, "r");
+
+    int ch = fgetc(file); // Try to read one character
+    if (ch == EOF) {
+        printf("Database contains no student records.");
+        return NO_ERROR;
+    }
+    
+    student_t student;
+    printf("ID FIRST NAME LAST_NAME GPA\n");
+
+    // Read student records from the file
+    while (fread(&student, STUDENT_RECORD_SIZE, 1, file) == 1) {
+        // Ignore deleted records
+        if (student.id == DELETED_STUDENT_ID) {
+            continue;
+        }
+
+        // Print in required format
+        printf("%d %s %s %.2f\n", student.id, student.fname, student.lname, student.gpa / 100.0);
+    }
+
+    fclose(file);
+    return NO_ERROR;
+
 }
 
 /*
@@ -214,8 +389,13 @@ int print_db(int fd){
  *                             s->id is zero
  *            
  */
-void print_student(student_t *s){
-    printf(M_NOT_IMPL);
+void print_student(student_t *s) {
+    if (s == NULL || s->id == DELETED_STUDENT_ID) {
+        printf(M_ERR_STD_PRINT);
+        return;
+    }
+
+    printf(STUDENT_PRINT_FMT_STRING, s->id, s->fname, s->lname, s->gpa / 100.0);
 }
 
 /*
@@ -266,9 +446,16 @@ void print_student(student_t *s){
  *            M_ERR_DB_WRITE   error writing to db or tempdb file (adding student)
  *            
  */
-int compress_db(int fd){
-    printf(M_NOT_IMPL);
-    return fd;
+int compress_db(int fd) {
+    // Truncate the file to remove empty records
+    if (ftruncate(fd, 0) == -1) {
+        printf("hi");
+        return ERR_DB_FILE;
+    }
+
+    // Success
+    printf(M_DB_COMPRESSED_OK);
+    return NO_ERROR;
 }
 
 

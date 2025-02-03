@@ -44,6 +44,7 @@ void usage(char *);
 #define M_ERR_DB_WRITE    "Error writing DB file, exiting!\n"
 #define M_ERR_DB_ADD_DUP  "Cant add student with ID=%d, already exists in db.\n"
 #define M_ERR_STD_PRINT   "Cant print student. Student is NULL or ID is zero\n"
+#define M_ERR_DB_SEEK "Error seeking in DB file, exiting!\n"
 
 #define M_STD_ADDED       "Student %d added to database.\n"
 #define M_STD_DEL_MSG     "Student %d was deleted from database.\n"
