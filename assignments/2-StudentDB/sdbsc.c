@@ -59,32 +59,41 @@ int open_db(char *dbFile, bool should_truncate){
  *  console:  Does not produce any console I/O used by other functions
  */
 int get_student(int fd, int id, student_t *s) {
-    // Validate the ID range
-    if (id < MIN_STD_ID || id > MAX_STD_ID) {
-        return SRCH_NOT_FOUND;
+    // Check for valid student pointer
+    if (s == NULL) {
+        return ERR_DB_FILE;  // Invalid pointer for student
     }
 
-    // Calculate the offset for the student record
+    // Check if ID is valid
+    if (id < MIN_STD_ID || id > MAX_STD_ID) {
+        return ERR_DB_OP;  // Invalid ID range
+    }
+
     off_t offset = id * STUDENT_RECORD_SIZE;
 
-    // Seek to the correct position in the file
+    // Read the student record at the specified offset
+    student_t student;
     if (lseek(fd, offset, SEEK_SET) == -1) {
-        printf(M_ERR_DB_SEEK);
-        return ERR_DB_FILE;
+        perror(M_ERR_DB_SEEK);
+        return ERR_DB_FILE;  // Error seeking in the database file
     }
 
-    // Read the student record from the file
-    if (read(fd, s, STUDENT_RECORD_SIZE) != STUDENT_RECORD_SIZE) {
-        printf(M_ERR_DB_READ);
-        return ERR_DB_FILE;
+    ssize_t bytes_read = read(fd, &student, STUDENT_RECORD_SIZE);
+    if (bytes_read == -1) {
+        perror(M_ERR_DB_READ);
+        return ERR_DB_FILE;  // Error reading the database file
     }
 
-    // Check if the record is empty (deleted)
-    if (s->id == DELETED_STUDENT_ID) {
-        return SRCH_NOT_FOUND;
+    // If the record is empty or deleted (all bytes are zero or DELETED_STUDENT_ID is set), return not found
+    if (bytes_read == 0 || memcmp(&student, &EMPTY_STUDENT_RECORD, sizeof(student_t)) == 0 || student.id == DELETED_STUDENT_ID) {
+        return SRCH_NOT_FOUND;  // Student not found or record is empty/deleted
     }
 
-    return NO_ERROR;
+    // If the student was found, copy the data into the provided pointer
+    memcpy(s, &student, sizeof(student_t));
+    printf("%d %s %s %.2f\n", s->id, s->fname, s->lname, s->gpa / 100.0);
+
+    return NO_ERROR;  // Successfully located and copied the student data
 }
 
 /*
@@ -112,75 +121,52 @@ int get_student(int fd, int id, student_t *s) {
  *            M_ERR_DB_WRITE    error writing to db file (adding student)
  *            
  */
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#define NO_ERROR        0
-#define ERR_DB_FILE     -1
-#define ERR_DB_OP       -2
-#define SRCH_NOT_FOUND  -3
-#define NOT_IMPLEMENTED_YET 0
 
 int add_student(int fd, int id, char *fname, char *lname, int gpa) {
-    // Check if ID and GPA are within valid ranges
     if (id < MIN_STD_ID || id > MAX_STD_ID || gpa < MIN_STD_GPA || gpa > MAX_STD_GPA) {
         fprintf(stderr, M_ERR_STD_RNG);
-        return ERR_DB_OP;  // Invalid ID or GPA
+        return ERR_DB_OP;
     }
 
-    // Allocate a student structure and populate it
-    student_t *new_student = malloc(sizeof(student_t));    
-    new_student->id = id;
-    strncpy(new_student->fname, fname, sizeof(new_student->fname) - 1);
-    strncpy(new_student->lname, lname, sizeof(new_student->lname) - 1);
-    new_student->gpa = gpa;
-
-    // Seek to the position of the student record
     off_t offset = id * STUDENT_RECORD_SIZE;
-    if (lseek(fd, offset, SEEK_SET) == -1) {
-        fprintf(stderr, M_ERR_DB_SEEK);
-        free(new_student);  // Free the allocated memory
-        return ERR_DB_FILE;  // Error seeking in the file
-    }
 
-    // Read the current record at the given position to check if it already exists
     student_t existing_student;
-    if (read(fd, &existing_student, STUDENT_RECORD_SIZE) == -1) {
-        fprintf(stderr, M_ERR_DB_READ);
-        free(new_student);  // Free the allocated memory
-        return ERR_DB_FILE;  // Error reading from the file
-    }
-
-    // If the record already exists, return an error
-    // Here, we'll check if the record is empty or deleted, meaning it's available for insertion
-    if (existing_student.id != DELETED_STUDENT_ID && existing_student.id != 0) {
-        fprintf(stderr, M_ERR_DB_ADD_DUP, id);
-        free(new_student);  // Free the allocated memory
-        return ERR_DB_OP;  // Attempt to add a student with an existing ID
-    }
-
-    // Now write the new student record to the file
     if (lseek(fd, offset, SEEK_SET) == -1) {
-        fprintf(stderr, M_ERR_DB_SEEK);
-        free(new_student);  // Free the allocated memory
-        return ERR_DB_FILE;  // Error seeking in the file again
+        perror(M_ERR_DB_SEEK);
+        return ERR_DB_FILE;
     }
 
-    if (write(fd, new_student, STUDENT_RECORD_SIZE) == -1) {
-        fprintf(stderr, M_ERR_DB_WRITE);
-        free(new_student);  // Free the allocated memory
-        return ERR_DB_FILE;  // Error writing to the file
+    ssize_t bytes_read = read(fd, &existing_student, STUDENT_RECORD_SIZE);
+    if (bytes_read == -1) {
+        perror(M_ERR_DB_READ);
+        return ERR_DB_FILE;
     }
 
-    // Print success message
+    if (bytes_read > 0 && memcmp(&existing_student, &EMPTY_STUDENT_RECORD, sizeof(student_t)) != 0 && 
+        existing_student.id != DELETED_STUDENT_ID) {
+        fprintf(stderr, M_ERR_DB_ADD_DUP, id);
+        return ERR_DB_OP;
+    }
+
+    student_t new_student;
+    new_student.id = id;
+    strncpy(new_student.fname, fname, sizeof(new_student.fname) - 1);
+    strncpy(new_student.lname, lname, sizeof(new_student.lname) - 1);
+    new_student.gpa = gpa;
+
+    if (lseek(fd, offset, SEEK_SET) == -1) {
+        perror(M_ERR_DB_SEEK);
+        return ERR_DB_FILE;
+    }
+
+    ssize_t bytes_written = write(fd, &new_student, STUDENT_RECORD_SIZE);
+    if (bytes_written != STUDENT_RECORD_SIZE) {
+        perror(M_ERR_DB_WRITE);
+        return ERR_DB_FILE;
+    }
+
     printf(M_STD_ADDED, id);
-
-    // Free the dynamically allocated memory
-    free(new_student);
-    
-    return NO_ERROR;  // Success
+    return NO_ERROR;
 }
 
 
@@ -266,38 +252,40 @@ int del_student(int fd, int id) {
  *            
  */
 int count_db_records(int fd) {
-    int record_count = 0;
-    student_t student;
+    int count = 0;
+    student_t current_student;
+    
+    // Seek to the beginning of the file
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        fprintf(stderr, M_ERR_DB_SEEK);
+        return ERR_DB_FILE;  // Error seeking the file
+    }
 
-    // Iterate through all possible IDs
-    for (int id = MIN_STD_ID; id <= MAX_STD_ID; id++) {
-        // Seek to the record position
-        off_t offset = id * STUDENT_RECORD_SIZE;
-        if (lseek(fd, offset, SEEK_SET) == -1) {
-            printf(M_ERR_DB_SEEK);
+    // Read records until EOF
+    while (1) {
+        ssize_t bytes_read = read(fd, &current_student, STUDENT_RECORD_SIZE);
+        
+        if (bytes_read == -1) {
+            fprintf(stderr, M_ERR_DB_READ);
             return ERR_DB_FILE;
+
+        if (bytes_read == 0) {
+            break;
         }
 
-        // Read the record
-        if (read(fd, &student, STUDENT_RECORD_SIZE) != STUDENT_RECORD_SIZE) {
-            printf(M_ERR_DB_READ);
-            return ERR_DB_FILE;
-        }
-
-        // Check if the record is not empty
-        if (student.id != DELETED_STUDENT_ID) {
-            record_count++;
+        if (memcmp(&current_student, &EMPTY_STUDENT_RECORD, sizeof(student_t)) != 0 && 
+            current_student.id != DELETED_STUDENT_ID) {
+            count++;
         }
     }
 
-    // Output the result
-    if (record_count == 0) {
+    if (count == 0) {
         printf(M_DB_EMPTY);
+        return count;
     } else {
-        printf(M_DB_RECORD_CNT, record_count);
+        printf(M_DB_RECORD_CNT, count);
+        return count;
     }
-
-    return NO_ERROR;
 }
 
 /*
@@ -345,14 +333,10 @@ int print_db(int fd) {
     student_t student;
     printf("ID FIRST NAME LAST_NAME GPA\n");
 
-    // Read student records from the file
     while (fread(&student, STUDENT_RECORD_SIZE, 1, file) == 1) {
-        // Ignore deleted records
         if (student.id == DELETED_STUDENT_ID) {
             continue;
         }
-
-        // Print in required format
         printf("%d %s %s %.2f\n", student.id, student.fname, student.lname, student.gpa / 100.0);
     }
 
