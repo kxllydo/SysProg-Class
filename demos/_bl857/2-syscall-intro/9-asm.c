@@ -1,18 +1,21 @@
 #include <unistd.h>
 
-int main()
-{
-    const char *message = "Hello, world!\n";
+int main() {
+    // const char *message = "Hello, world!\n";
 
-    asm volatile(
-        "mov $1, %%rax\n"  // Syscall number for write
-        "mov $1, %%rdi\n"  // File descriptor (stdout)
-        "mov %0, %%rsi\n"  // Pointer to message
-        "mov $14, %%rdx\n" // Length of message
-        "syscall\n"        // Make the syscall
-        :
-        : "r"(message)                 // Input constraint: %0 refers to 'message'
-        : "rax", "rdi", "rsi", "rdx"); // Clobbered registers
+    // asm volatile(
+    //     "mov x8, %0\n\t"   // Syscall number for write (SYS_write = 64)
+    //     "mov x0, %1\n\t"   // File descriptor (stdout = 1)
+    //     "mov x1, %2\n\t"   // Pointer to message
+    //     "mov x2, %3\n\t"   // Length of message
+    //     "svc #0\n\t"       // Make the syscall
+    //     :
+    //     : "i" (SYS_write), // Input: syscall number
+    //       "r" (STDOUT_FILENO), // Input: file descriptor
+    //       "r" (message),       // Input: pointer to message
+    //       "r" (14)             // Input: length of message
+    //     : "x0", "x1", "x2", "x8" // Clobbered registers
+    // );
 
     return 0;
 }

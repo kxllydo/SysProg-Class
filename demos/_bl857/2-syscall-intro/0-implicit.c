@@ -16,8 +16,8 @@ int main()
 // {
 //     // Return exit code directly using a syscall
 //     __asm__(
-//         "mov $60, %rax\n"  // Syscall number for exit
-//         "mov $102, %rdi\n" // Exit code 102
-//         "syscall\n"        // Make syscall
+//         "mov x8, #93\n"  // Syscall number for exit on ARM64
+//         "mov x0, #102\n" // Exit code 102
+//         "svc #0\n"       // Make syscall
 //     );
 // }

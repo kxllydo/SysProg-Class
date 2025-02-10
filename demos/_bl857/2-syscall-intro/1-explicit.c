@@ -24,15 +24,20 @@ int main()
     return 0;
 }
 
-void getpid_asm()
-{
+void getpid_asm() {
     pid_t pid;
-    asm("syscall"
-        : "=a"(pid)
-        : "a"(SYS_getpid)
-        : "rcx", "r11", "memory");
+    asm volatile(
+        "mov x8, %1\n\t"  // Load syscall number (SYS_getpid) into x8
+        "svc #0\n\t"      // Trigger the syscall
+        "mov %0, x0"      // Store the return value (PID) from x0 into pid
+        : "=r" (pid)      // Output: pid
+        : "i" (SYS_getpid) // Input: syscall number for getpid
+        : "x8", "x0"      // Clobbered registers
+    );
+
     printf("my process ID via asm: %d\n", pid);
 }
+
 
 void getpid_syscall_wrapper()
 {
