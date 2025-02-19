@@ -60,46 +60,51 @@
 
     // TODO IMPLEMENT if not built-in command, fork/exec as an external command
     // for example, if the user input is "ls -l", you would fork/exec the command "ls" with the arg "-l"
-void remove_leading_trailing_repeat_spaces(char *str) {
-    int i = 0, j = strlen(str) - 1;
+void remove_spaces(char *str) {
+    int i = 0, 
+    int j = 0;
+    bool inside_quotes = false;
 
-    while (isspace(str[i])) i++;
-    while (j >= 0 && isspace(str[j])) j--;
+    while (str[i] != '\0' && isspace(str[i])) {
+        i++;
+    }
 
-    if (i <= j) {
-        memmove(str, str + i, j - i + 1);
-        str[j - i + 1] = '\0';
-    } else {
-        str[0] = '\0';
+    for (; str[i] != '\0'; i++) {
+        if (str[i] == '"' || str[i] == '\'') {
+            if (inside_quotes) {
+                inside_quotes = false;
+            } else {
+                inside_quotes = true;
+            }
+            str[j++] = str[i];
+        } else if (isspace(str[i])) {
+            if (inside_quotes) {
+                str[j++] = str[i];
+            } else {
+                if (j > 0 && !isspace(str[j - 1])) {
+                    str[j++] = ' ';
+                }
+            }
+        } else {
+            str[j++] = str[i];
+        }
+    }
+
+    str[j] = '\0';
+
+    int len = strlen(str);
+    while (len > 0 && isspace(str[len - 1])) {
+        str[len - 1] = '\0';
+        len--;
     }
 }
 
 int main(){
-    char string[] = " this     has space    ";  // Correct
-    remove_leading_trailing_repeat_spaces(string);
+    char string[] = "  this     \"has      space \"   \n";  // Correct
+    remove_spaces(string);
     printf("%s\n", string);
 }
-// Function to parse input into cmd_buff_t
-// int parse_input_to_cmd_buff(char *input, cmd_buff_t *cmd_buff) {
-//     int argc = 0;
-//     char *token;
-//     char *rest = input;
 
-//     // Tokenize the input string
-//     while ((token = strtok_r(rest, " \t", &rest))) {
-//         if (argc >= CMD_ARGV_MAX - 1) {
-//             printf("Too many arguments!\n");
-//             return -1;
-//         }
-//         cmd_buff->argv[argc++] = token;
-//     }
-
-//     cmd_buff->argv[argc] = NULL; // Null-terminate the argv array
-//     cmd_buff->argc = argc;
-//     return 0;
-// }
-
-// // Main command loop
 // int exec_local_cmd_loop() {
 //     cmd_buff_t cmd;
 //     cmd._cmd_buffer = malloc(SH_CMD_MAX);
@@ -108,6 +113,7 @@ int main(){
 //         return ERR_MEMORY;
 //     }
 
+
 //     while (1) {
 //         printf("%s", SH_PROMPT);
 //         if (fgets(cmd._cmd_buffer, SH_CMD_MAX, stdin) == NULL) {
@@ -115,12 +121,13 @@ int main(){
 //             break;
 //         }
 
-//         // Trim leading/trailing spaces
 //         trim_spaces(cmd._cmd_buffer);
+
 
 //         if (strlen(cmd._cmd_buffer) == 0) {
 //             continue; // Skip empty commands
 //         }
+
 
 //         // Check for exit command
 //         if (strcmp(cmd._cmd_buffer, EXIT_CMD) == 0) {
@@ -128,15 +135,18 @@ int main(){
 //             exit(0);
 //         }
 
+
 //         // Check for 'cd' command
 //         if (strncmp(cmd._cmd_buffer, "cd", 2) == 0) {
 //             char *arg = cmd._cmd_buffer + 2; // Skip "cd"
 //             while (isspace(*arg)) arg++; // Skip spaces after "cd"
 
+
 //             if (strlen(arg) == 0) {
 //                 // No directory provided, change to home directory
 //                 arg = getenv("HOME");
 //             }
+
 
 //             // Try to change directory
 //             if (chdir(arg) != 0) {
@@ -145,10 +155,12 @@ int main(){
 //             continue;
 //         }
 
+
 //         // Parse the command buffer into cmd_buff_t
 //         if (parse_input_to_cmd_buff(cmd._cmd_buffer, &cmd) == -1) {
 //             continue; // Skip if there's an error in parsing
 //         }
+
 
 //         // Fork and execute command
 //         pid_t pid = fork();
@@ -163,11 +175,13 @@ int main(){
 //             int status;
 //             waitpid(pid, &status, 0);
 
+
 //             if (WIFEXITED(status)) {
 //                 printf("Process exited with status %d\n", WEXITSTATUS(status));
 //             }
 //         }
 //     }
+
 
 //     free(cmd._cmd_buffer);
 //     return 0;
