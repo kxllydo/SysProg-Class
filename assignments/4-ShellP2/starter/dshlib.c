@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include "dshlib.h"
+
 
 /*
  * Implement your exec_local_cmd_loop function by building a loop that prompts the 
@@ -141,6 +143,9 @@ int exec_local_cmd_loop() {
         return -1;
     }
 
+    int last_return_code = 0;
+
+
     while (1) {
         printf("%s", SH_PROMPT);
         if (fgets(cmd._cmd_buffer, SH_CMD_MAX, stdin) == NULL) {
@@ -168,16 +173,29 @@ int exec_local_cmd_loop() {
 
             if (chdir(arg) != 0) {
                 perror("cd");
+                last_return_code = errno;
+            } else {
+                last_return_code = 0;
             }
             continue;
         }
 
         if (strcmp(cmd._cmd_buffer, "dragon") == 0) {
             print_dragon();
+            last_return_code = 0;
+
             continue;
         }
 
+        if (strcmp(cmd._cmd_buffer, "rc") == 0) {
+            printf("%d\n", last_return_code);
+            continue;
+        }
+
+
         if (parse_input_to_cmd_buff(cmd._cmd_buffer, &cmd) == -1) {
+            last_return_code = -1;
+
             continue;
         }
 
@@ -187,11 +205,16 @@ int exec_local_cmd_loop() {
             continue;
         } else if (pid == 0) {
             execvp(cmd.argv[0], cmd.argv);
-            perror("execvp");
-            exit(1);
+            fprintf(stderr, "Error: %s\n", strerror(errno));
+            exit(errno);
         } else {
             int status;
             waitpid(pid, &status, 0);
+            if (WIFEXITED(status)) {
+                last_return_code = WEXITSTATUS(status);
+            } else {
+                last_return_code = -1;
+            }
         }
     }
 

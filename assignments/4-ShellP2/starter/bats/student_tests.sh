@@ -144,82 +144,25 @@ EOF
     current=$(pwd)
     run "${current}/dsh" <<EOF
 snowman
+rc
 EOF
+    expected_output=$(printf "2\ndsh2> dsh2>\ncmd loop returned 0")
+    echo "${stripped_output} -> ${expected_output}"
+
     [ "$status" -eq 0 ]
+    [ "${lines[1]}"="$expected_output"  ]
 }
 
-# @test "Change directory" {
-#     current=$(pwd)
+@test "EXTRA CREDIT - Return code works" {
+    current=$(pwd)
+    run "${current}/dsh" <<EOF
+snowman
+rc
+EOF
+    expected_output=$(printf "2\ndsh2> dsh2>\ncmd loop returned 0")
+    echo "${stripped_output} -> ${expected_output}"
 
-#     cd /tmp
-#     mkdir -p dsh-test
+    [ "$status" -eq 0 ]
+    [ "${lines[1]}"="$expected_output"  ]
+}
 
-#     run "${current}/dsh" <<EOF                
-# cd dsh-test
-# pwd
-# EOF
-
-#     # Strip all whitespace (spaces, tabs, newlines) from the output
-#     stripped_output=$(echo "$output" | tr -d '[:space:]')
-
-#     # Expected output with all whitespace removed for easier matching
-#     expected_output="/tmp/dsh-testdsh2>dsh2>dsh2>cmdloopreturned0"
-
-#     # These echo commands will help with debugging and will only print
-#     #if the test fails
-#     echo "Captured stdout:" 
-#     echo "Output: $output"
-#     echo "Exit Status: $status"
-#     echo "${stripped_output} -> ${expected_output}"
-
-#     # Check exact match
-#     [ "$stripped_output" = "$expected_output" ]
-
-#     # Assertions
-#     [ "$status" -eq 0 ]
-# }
-
-# @test "Check if shell starts successfully" {
-#     run $TEST_SHELL <<< "exit"
-#     [ "$status" -eq 0 ]
-# }
-
-# @test "Test 'cd' command to a valid directory" {
-#     run $TEST_SHELL <<< "cd /tmp\npwd\nexit"
-#     [ "$status" -eq 0 ]
-#     [[ "$output" == *"/tmp"* ]]
-# }
-
-# @test "Test 'cd' command to an invalid directory" {
-#     run $TEST_SHELL <<< "cd /nonexistent\nexit"
-#     [ "$status" -eq 0 ] # Should not crash
-#     [[ "$output" == *"cd: "* ]]
-# }
-
-# @test "Test 'ls' command" {
-#     run $TEST_SHELL <<< "ls\nexit"
-#     [ "$status" -eq 0 ]
-#     [[ "$output" != "" ]]
-# }
-
-# @test "Test 'echo' command" {
-#     run $TEST_SHELL <<< "echo Hello, world!\nexit"
-#     [ "$status" -eq 0 ]
-#     [[ "$output" == *"Hello, world!"* ]]
-# }
-
-# @test "Test handling of empty input" {
-#     run $TEST_SHELL <<< "\nexit"
-#     [ "$status" -eq 0 ]
-# }
-
-# @test "Test execution of invalid command" {
-#     run $TEST_SHELL <<< "invalidcommand\nexit"
-#     [ "$status" -eq 0 ] # Should not crash
-#     [[ "$output" == *"execvp: "* ]]
-# }
-
-# @test "Test exit command" {
-#     run $TEST_SHELL <<< "exit"
-#     [ "$status" -eq 0 ]
-# }
