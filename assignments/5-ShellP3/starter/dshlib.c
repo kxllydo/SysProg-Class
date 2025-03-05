@@ -162,9 +162,7 @@ int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff) {
     // Parse the command line into arguments
     return parse_input_to_cmd_buff(cmd_buff->_cmd_buffer, cmd_buff);
 }
-
 // Free memory allocated for the command list
-
 
 int build_cmd_list(char *cmd_line, command_list_t *clist) {
     char *token;
@@ -241,7 +239,6 @@ int execute_pipeline(command_list_t *clist) {
 
     return OK;
 }
-
 int exec_local_cmd_loop() {
     char cmd_line[SH_CMD_MAX];
     command_list_t clist;
