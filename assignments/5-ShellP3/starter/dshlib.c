@@ -124,38 +124,107 @@ int parse_input_to_cmd_buff(char *input, cmd_buff_t *cmd_buff) {
     cmd_buff->argc = argc;
     return 0;
 }
-    
-int exec_local_cmd_loop() {
-    cmd_buff_t cmd;
-    cmd._cmd_buffer = malloc(SH_CMD_MAX);
-    if (!cmd._cmd_buffer) {
-        perror("malloc");
-        return -1;
+
+int build_cmd_list(char *cmd_line, command_list_t *clist) {
+    char *token;
+    int i = 0;
+
+    token = strtok(cmd_line, PIPE_STRING);
+    while (token != NULL && i < CMD_MAX) {
+        if (alloc_cmd_buff(&clist->commands[i]) != OK) {
+            return ERR_MEMORY;
+        }
+        if (build_cmd_buff(token, &clist->commands[i]) != OK) {
+            return ERR_CMD_ARGS_BAD;
+        }
+        token = strtok(NULL, PIPE_STRING);
+        i++;
     }
 
-    int last_return_code = 0;
+    if (token != NULL) {
+        return ERR_TOO_MANY_COMMANDS;
+    }
 
+    clist->num = i;
+    return OK;
+}
+
+int execute_pipeline(command_list_t *clist) {
+    int pipefd[2];
+    int prev_pipe_read = -1;
+    pid_t pids[CMD_MAX];
+    int status;
+
+    for (int i = 0; i < clist->num; i++) {
+        if (i < clist->num - 1) {
+            if (pipe(pipefd) == -1) {
+                perror("pipe");
+                return ERR_EXEC_CMD;
+            }
+        }
+
+        pids[i] = fork();
+        if (pids[i] == -1) {
+            perror("fork");
+            return ERR_EXEC_CMD;
+        } else if (pids[i] == 0) {
+            if (i > 0) {
+                dup2(prev_pipe_read, STDIN_FILENO);
+                close(prev_pipe_read);
+            }
+            if (i < clist->num - 1) {
+                dup2(pipefd[1], STDOUT_FILENO);
+                close(pipefd[1]);
+                close(pipefd[0]);
+            }
+            execvp(clist->commands[i].argv[0], clist->commands[i].argv);
+            perror("execvp");
+            exit(ERR_EXEC_CMD);
+        } else {
+            if (i > 0) {
+                close(prev_pipe_read);
+            }
+            if (i < clist->num - 1) {
+                close(pipefd[1]);
+                prev_pipe_read = pipefd[0];
+            }
+        }
+    }
+
+    for (int i = 0; i < clist->num; i++) {
+        waitpid(pids[i], &status, 0);
+        if (WIFEXITED(status) && WEXITSTATUS(status) != OK) {
+            return WEXITSTATUS(status);
+        }
+    }
+
+    return OK;
+}
+
+int exec_local_cmd_loop() {
+    char cmd_line[SH_CMD_MAX];
+    command_list_t clist;
+    int last_return_code = 0;
 
     while (1) {
         printf("%s", SH_PROMPT);
-        if (fgets(cmd._cmd_buffer, SH_CMD_MAX, stdin) == NULL) {
+        if (fgets(cmd_line, SH_CMD_MAX, stdin) == NULL) {
             printf("\n");
             break;
         }
 
-        cmd._cmd_buffer[strcspn(cmd._cmd_buffer, "\n")] = '\0';
+        cmd_line[strcspn(cmd_line, "\n")] = '\0';
 
-        if (strlen(cmd._cmd_buffer) == 0) {
+        if (strlen(cmd_line) == 0) {
             continue;
         }
 
-        if (strcmp(cmd._cmd_buffer, EXIT_CMD) == 0) {
-            free(cmd._cmd_buffer);
-            exit(0);
+        if (strcmp(cmd_line, EXIT_CMD) == 0) {
+            break;
         }
 
-        if (strncmp(cmd._cmd_buffer, "cd", 2) == 0) {
-            char *arg = cmd._cmd_buffer + 2;
+        if (strncmp(cmd_line, "cd", 2) == 0) {
+            char *arg = cmd_line + 2;
             while (isspace(*arg)) arg++;
             if (strlen(arg) == 0) {
                 continue;
@@ -170,44 +239,27 @@ int exec_local_cmd_loop() {
             continue;
         }
 
-        if (strcmp(cmd._cmd_buffer, "dragon") == 0) {
+        if (strcmp(cmd_line, "dragon") == 0) {
             print_dragon();
             last_return_code = 0;
-
             continue;
         }
 
-        if (strcmp(cmd._cmd_buffer, "rc") == 0) {
+        if (strcmp(cmd_line, "rc") == 0) {
             printf("%d\n", last_return_code);
             continue;
         }
 
-
-        if (parse_input_to_cmd_buff(cmd._cmd_buffer, &cmd) == -1) {
-            last_return_code = -1;
-
+        if (build_cmd_list(cmd_line, &clist) != OK) {
+            printf(CMD_ERR_PIPE_LIMIT, CMD_MAX);
+            last_return_code = ERR_TOO_MANY_COMMANDS;
             continue;
         }
 
-        pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork");
-            continue;
-        } else if (pid == 0) {
-            execvp(cmd.argv[0], cmd.argv);
-            fprintf(stderr, "Error: %s\n", strerror(errno));
-            exit(errno);
-        } else {
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status)) {
-                last_return_code = WEXITSTATUS(status);
-            } else {
-                last_return_code = -1;
-            }
-        }
+        last_return_code = execute_pipeline(&clist);
+
+        free_cmd_list(&clist);
     }
 
-    free(cmd._cmd_buffer);
-    return 0;
+    return last_return_code;
 }
