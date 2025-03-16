@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include "dshlib.h"
 
@@ -77,6 +78,13 @@ void remove_spaces(char *str) {
     str[j] = '\0';
 }
 
+int free_cmd_list(command_list_t *cmd_list) {
+    for (int i = 0; i < cmd_list->num; i++) {
+        free_cmd_buff(&cmd_list->commands[i]);
+    }
+    return OK;
+}
+
 int parse_input_to_cmd_buff(char *input, cmd_buff_t *cmd_buff) {
     int argc = 0;
     char *start = input;
@@ -125,6 +133,7 @@ int parse_input_to_cmd_buff(char *input, cmd_buff_t *cmd_buff) {
     return 0;
 }
 
+<<<<<<< HEAD
 int build_cmd_list(char *cmd_line, command_list_t *clist) {
     char *token;
     int i = 0;
@@ -145,6 +154,59 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
         return ERR_TOO_MANY_COMMANDS;
     }
 
+=======
+int alloc_cmd_buff(cmd_buff_t *cmd_buff) {
+    cmd_buff->_cmd_buffer = malloc(SH_CMD_MAX);
+    if (!cmd_buff->_cmd_buffer) {
+        return ERR_MEMORY;
+    }
+    return OK;
+}
+
+// Free memory allocated for the command buffer
+int free_cmd_buff(cmd_buff_t *cmd_buff) {
+    if (cmd_buff->_cmd_buffer) {
+        free(cmd_buff->_cmd_buffer);
+        cmd_buff->_cmd_buffer = NULL;
+    }
+    return OK;
+}
+
+// Build the command buffer by parsing the input string
+int build_cmd_buff(char *cmd_line, cmd_buff_t *cmd_buff) {
+    if (strlen(cmd_line) >= SH_CMD_MAX) {
+        return ERR_CMD_OR_ARGS_TOO_BIG;
+    }
+
+    strncpy(cmd_buff->_cmd_buffer, cmd_line, SH_CMD_MAX);
+    cmd_buff->_cmd_buffer[SH_CMD_MAX - 1] = '\0'; // Ensure null termination
+
+    // Parse the command line into arguments
+    return parse_input_to_cmd_buff(cmd_buff->_cmd_buffer, cmd_buff);
+}
+// Free memory allocated for the command list
+
+int build_cmd_list(char *cmd_line, command_list_t *clist) {
+    char *token;
+    int i = 0;
+
+    token = strtok(cmd_line, PIPE_STRING);
+    while (token != NULL && i < CMD_MAX) {
+        if (alloc_cmd_buff(&clist->commands[i]) != OK) {
+            return ERR_MEMORY;
+        }
+        if (build_cmd_buff(token, &clist->commands[i]) != OK) {
+            return ERR_CMD_ARGS_BAD;
+        }
+        token = strtok(NULL, PIPE_STRING);
+        i++;
+    }
+
+    if (token != NULL) {
+        return ERR_TOO_MANY_COMMANDS;
+    }
+
+>>>>>>> e324407f96525b2f207c0463e350bb53519a1169
     clist->num = i;
     return OK;
 }
@@ -200,7 +262,10 @@ int execute_pipeline(command_list_t *clist) {
 
     return OK;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> e324407f96525b2f207c0463e350bb53519a1169
 int exec_local_cmd_loop() {
     char cmd_line[SH_CMD_MAX];
     command_list_t clist;
