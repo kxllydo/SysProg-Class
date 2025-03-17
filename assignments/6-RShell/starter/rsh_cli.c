@@ -12,7 +12,26 @@
 #include "rshlib.h"
 
 
+int start_server(char *ifaces, int port, int is_threaded) {
+    int svr_socket;
+    int rc;
 
+    svr_socket = boot_server(ifaces, port);
+    if (svr_socket < 0) {
+        int err_code = svr_socket;
+        return err_code;
+    }
+
+    rc = process_cli_requests(svr_socket);
+
+    stop_server(svr_socket);
+
+    return rc;
+}
+
+int stop_server(int svr_socket) {
+    return close(svr_socket);
+}
 
 /*
  * exec_remote_cmd_loop(server_ip, port)
