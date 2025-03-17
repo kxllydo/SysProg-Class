@@ -177,7 +177,12 @@ int start_client(char *server_ip, int port){
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    // addr.sin_addr.s_addr = inet_addr(server_ip);
+    addr.sin_addr.s_addr = inet_addr(server_ip);
+    if (inet_pton(AF_INET, server_ip, &addr.sin_addr) <= 0) {
+        perror("inet_pton");
+        close(cli_socket);
+        return ERR_RDSH_CLIENT;
+    }
     addr.sin_port = htons(port);
 
     // Connect to the server
