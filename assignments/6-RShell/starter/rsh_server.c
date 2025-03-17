@@ -305,9 +305,8 @@ int process_cli_requests(int svr_socket){
 
         io_buff[io_size] = '\0';
 
-        rc = parse_command(io_buff, &cmd_list);
 
-        if (strcmp(io_buff, stop-server) == 0) {
+        if (strcmp(io_buff, "stop-server") == 0) {
             send_message_string(cli_socket, "Stopping server\n");
             free(io_buff);
             return OK_EXIT;
@@ -320,15 +319,15 @@ int process_cli_requests(int svr_socket){
         rc = build_cmd_list(io_buff, &cmd_list);
         
         if (rc == WARN_NO_CMDS) {
-            send_message_string(client_socket, CMD_WARN_NO_CMD);
+            send_message_string(cli_socket, CMD_WARN_NO_CMD);
             continue;
         } else if (rc == ERR_TOO_MANY_COMMANDS) {
             char error_message[100];
             snprintf(error_message, sizeof(error_message), CMD_ERR_PIPE_LIMIT, CMD_MAX);
-            send_message_string(client_socket, error_message);
+            send_message_string(cli_socket, error_message);
             continue;
         } else if (rc != OK) {
-            send_message_string(client_socket, "Error parsing command\n");
+            send_message_string(cli_socket, "Error parsing command\n");
             continue;
         }
 
@@ -336,17 +335,17 @@ int process_cli_requests(int svr_socket){
             Built_In_Cmds built_in_command = rsh_built_in_cmd(&cmd_list.commands[0]);
 
             if (built_in_command == BI_CMD_EXIT) {
-                send_message_string(client_socket, "Exiting client session\n");
+                send_message_string(cli_socket, "Exiting client session\n");
                 free_command_list(&cmd_list);
-                free(buffer);
+                free(io_buff);
                 return OK;
             } else if (built_in_command == BI_CMD_STOP_SVR) {
-                send_message_string(client_socket, "Stopping server\n");
+                send_message_string(cli_socket, "Stopping server\n");
                 free_command_list(&cmd_list);
-                free(buffer);
+                free(io_buff);
                 return OK_EXIT;
             } else if (built_in_command == BI_EXECUTED) {
-                send_message_eof(client_socket);
+                send_message_eof(cli_socket);
                 free_command_list(&cmd_list);
                 continue;
             }
