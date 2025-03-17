@@ -430,7 +430,31 @@ int send_message_string(int cli_socket, char *buff){
  *                  macro that we discussed during our fork/exec lecture to
  *                  get this value. 
  */
-int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
+ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
+    // Check if the command is 'cd'
+    if (clist->num == 1 && strcmp(clist->commands[0].argv[0], "cd") == 0) {
+        if (clist->commands[0].argc < 2) {
+            // No directory provided, send error message
+            send_message_string(cli_sock, "cd: missing argument\n");
+            send_message_eof(cli_sock);
+            return ERR_RDSH_CMD_EXEC;
+        }
+
+        // Change directory in the server process
+        if (chdir(clist->commands[0].argv[1]) != 0) {
+            // If chdir fails, send error message
+            send_message_string(cli_sock, "cd: failed to change directory\n");
+            send_message_eof(cli_sock);
+            return ERR_RDSH_CMD_EXEC;
+        }
+
+        // Send success message
+        send_message_string(cli_sock, "Directory changed\n");
+        send_message_eof(cli_sock);
+        return OK;
+    }
+
+    // Rest of the pipeline execution logic for non-cd commands
     int pipes[clist->num - 1][2];  // Array of pipes
     pid_t pids[clist->num];
     int  pids_st[clist->num];         // Array to store process IDs
@@ -478,7 +502,6 @@ int rsh_execute_pipeline(int cli_sock, command_list_t *clist) {
             return ERR_RDSH_CMD_EXEC;
         }
     }
-
 
     // Parent process: close all pipe ends
     for (int i = 0; i < clist->num - 1; i++) {
