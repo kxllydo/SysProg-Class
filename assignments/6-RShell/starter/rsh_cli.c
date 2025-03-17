@@ -115,24 +115,54 @@ int exec_remote_cmd_loop(char *address, int port) {
 
         cmd_buff[strcspn(cmd_buff, "\n")] = '\0';
 
-        if (send(cli_socket, cmd_buff, strlen(cmd_buff) + 1, 0) < 0) {
-            perror("Error sending data");
+        if (strcmp(cmd_buff, EXIT_CMD) == 0) {
+            io_size = send(cli_socket, cmd_buff, strlen(cmd_buff) + 1, 0);
+            if (io_size < 0) {
+                perror("send");
+                return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_COMMUNICATION);
+            }
+
+            while ((io_size = recv(cli_socket, rsp_buff, RDSH_COMM_BUFF_SZ, 0)) > 0) {
+                is_eof = (rsp_buff[io_size-1] == RDSH_EOF_CHAR) ? 1 : 0;
+
+                if (is_eof) {
+                    printf("%.*s", (int)io_size - 1, rsp_buff);
+                } else {
+                    printf("%.*s", (int)io_size, rsp_buff);
+                }
+
+                if (is_eof) break;
+            }
+            break;
+        }
+
+        io_size = send(cli_socket, cmd_buff, strlen(cmd_buff) + 1, 0);
+        if (io_size < 0) {
+            perror("send");
             return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_COMMUNICATION);
         }
 
-        do {
-            received_bytes = recv(cli_socket, rsp_buff, RDSH_COMM_BUFF_SZ, 0);
-            if (received_bytes <= 0) {
-                if (received_bytes < 0) perror("Error receiving data");
-                else printf(RCMD_SERVER_EXITED);
-                return client_cleanup(cli_socket, cmd_buff, rsp_buff, OK);
+        while ((io_size = recv(cli_socket, rsp_buff, RDSH_COMM_BUFF_SZ, 0)) > 0) {
+            is_eof = (rsp_buff[io_size-1] == RDSH_EOF_CHAR) ? 1 : 0;
+
+            if (is_eof) {
+                printf("%.*s", (int)io_size - 1, rsp_buff);
+            } else {
+                printf("%.*s", (int)io_size, rsp_buff);
             }
 
-            is_eof = (rsp_buff[received_bytes - 1] == RDSH_EOF_CHAR);
-            printf("%.*s", is_eof ? (int)received_bytes - 1 : (int)received_bytes, rsp_buff);
-        } while (!is_eof);
+            if (is_eof) break;
+        }
 
-        if (strcmp(cmd_buff, EXIT_CMD) == 0 || strcmp(cmd_buff, "stop-server") == 0) {
+        if (io_size < 0) {
+            perror("recv");
+            return client_cleanup(cli_socket, cmd_buff, rsp_buff, ERR_RDSH_COMMUNICATION);
+        } else if (io_size == 0) {
+            printf(RCMD_SERVER_EXITED);
+            return client_cleanup(cli_socket, cmd_buff, rsp_buff, OK);
+        }
+
+        if (strcmp(cmd_buff, "stop-server") == 0) {
             break;
         }
     }
