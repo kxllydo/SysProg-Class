@@ -152,28 +152,6 @@ int parse_input_to_cmd_buff(char *input, cmd_buff_t *cmd_buff) {
     return 0;
 }
 
-<<<<<<< HEAD
-int build_cmd_list(char *cmd_line, command_list_t *clist) {
-    char *token;
-    int i = 0;
-
-    token = strtok(cmd_line, PIPE_STRING);
-    while (token != NULL && i < CMD_MAX) {
-        if (alloc_cmd_buff(&clist->commands[i]) != OK) {
-            return ERR_MEMORY;
-        }
-        if (build_cmd_buff(token, &clist->commands[i]) != OK) {
-            return ERR_CMD_ARGS_BAD;
-        }
-        token = strtok(NULL, PIPE_STRING);
-        i++;
-    }
-
-    if (token != NULL) {
-        return ERR_TOO_MANY_COMMANDS;
-    }
-
-=======
 int alloc_cmd_buff(cmd_buff_t *cmd_buff) {
     cmd_buff->_cmd_buffer = malloc(SH_CMD_MAX);
     if (!cmd_buff->_cmd_buffer) {
@@ -225,8 +203,15 @@ int build_cmd_list(char *cmd_line, command_list_t *clist) {
         return ERR_TOO_MANY_COMMANDS;
     }
 
->>>>>>> e324407f96525b2f207c0463e350bb53519a1169
     clist->num = i;
+    return OK;
+}
+
+int free_command_list(command_list_t *cmd_lst) {
+    for (int i = 0; i < cmd_lst->num; i++) {
+        free_cmd_buff(&cmd_lst->commands[i]);
+    }
+    cmd_lst->num = 0;
     return OK;
 }
 
@@ -281,10 +266,6 @@ int execute_pipeline(command_list_t *clist) {
 
     return OK;
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> e324407f96525b2f207c0463e350bb53519a1169
 int exec_local_cmd_loop() {
     char cmd_line[SH_CMD_MAX];
     command_list_t clist;
